@@ -1,0 +1,6 @@
+{
+  "name": "LGS Master",
+  "description": "LGS 2027 hazırlık için sınırsız yapay zeka destekli soru motoru, deneme testleri ve çalışma günlüğü",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

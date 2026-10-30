@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>LGS Master 2027 - Sınırsız Yapay Zeka & Çalışma Günlüğü</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .fade-in { animation: fadeUp 0.5s ease both; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6">
+        <header class="text-center mb-6">
+            <h1 class="text-2xl font-extrabold text-indigo-400">🚀 LGS Master 2027</h1>
+            <p class="text-xs text-slate-400 mt-1">Sınırsız AI Soru Motoru & Gelişim Takip Portalı</p>
+        </header>
+
+        <!-- API KEY PANELİ -->
+        <div class="mb-4 p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+            <label class="block text-xs font-semibold text-slate-300 mb-1" for="api-key-input">Gemini API Anahtarı:</label>
+            <div class="flex gap-2">
+                <input type="password" id="api-key-input"
+                       placeholder="AIzaSy... ile başlayan anahtarı yapıştırın"
+                       autocomplete="off"
+                       class="flex-1 p-2 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                       oninput="saveApiKey(this.value)">
+                <button onclick="testApiKey()"
+                        class="px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold transition whitespace-nowrap">
+                    Anahtarı Doğrula
+                </button>
+            </div>
+            <p id="api-status" class="text-[11px] text-slate-500 mt-2">
+                Anahtarı <b>Google AI Studio</b> → "Get API key" bölümünden alabilirsiniz.
+            </p>
+        </div>
+
+        <!-- HATA KUTUSU -->
+        <div id="error-box" class="hidden mb-4 p-3 bg-rose-950/60 border border-rose-800 rounded-xl text-xs text-rose-200 leading-relaxed"></div>
+
+        <!-- İSTATİSTİK & BAŞARI PANELİ -->
+        <div id="stats-panel" class="mb-6 grid grid-cols-3 gap-2 bg-slate-800/40 p-3 rounded-xl border border-slate-800 text-center">
+            <div>
+                <p class="text-[10px] text-slate-400 font-medium uppercase">Toplam Soru</p>
+                <p id="stat-total-q" class="text-base font-bold text-indigo-400">0</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-medium uppercase">Toplam Net</p>
+                <p id="stat-total-net" class="text-base font-bold text-emerald-400">0.00</p>
+            </div>
+            <div>
+                <p class="text-[10px] text-slate-400 font-medium uppercase">Başarı Oranı</p>
+                <p id="stat-accuracy" class="text-base font-bold text-amber-400">%0</p>
+            </div>
+        </div>
+
+        <!-- KATEGORİ SEÇİMİ -->
+        <div id="subject-selection">
+            <h2 class="text-sm font-semibold text-slate-300 mb-3">Ders Seçin (Yapay Zeka Canlı Soru Üretecektir):</h2>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="generateAndStart('Matematik')" class="p-4 bg-slate-800 hover:bg-indigo-600 transition rounded-xl font-bold text-sm text-left border border-slate-700">📐 Matematik</button>
+                <button onclick="generateAndStart('Fen Bilimleri')" class="p-4 bg-slate-800 hover:bg-emerald-600 transition rounded-xl font-bold text-sm text-left border border-slate-700">🔬 Fen Bilimleri</button>
+                <button onclick="generateAndStart('Türkçe')" class="p-4 bg-slate-800 hover:bg-amber-600 transition rounded-xl font-bold text-sm text-left border border-slate-700">📖 Türkçe</button>
+                <button onclick="generateAndStart('T.C. İnkılap Tarihi ve Atatürkçülük')" class="p-4 bg-slate-800 hover:bg-rose-600 transition rounded-xl font-bold text-sm text-left border border-slate-700">📜 İnkılap Tarihi</button>
+            </div>
+
+            <!-- GEÇMİŞ ÇALIŞMA GÜNLÜĞÜ -->
+            <div class="border-t border-slate-800 pt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">📊 LGS Çalışma Günlüğü</h3>
+                    <button onclick="clearHistory()" class="text-[10px] text-rose-400 hover:underline">Sıfırla</button>
+                </div>
+                <div id="history-list" class="space-y-2 max-h-40 overflow-y-auto pr-1 text-xs"></div>
+            </div>
+        </div>
+
+        <!-- YÜKLENİYOR EKRANI -->
+        <div id="loading-screen" class="hidden text-center py-10">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-indigo-500 border-t-transparent mb-4"></div>
+            <p class="text-sm font-bold text-indigo-300">Yapay Zeka 2027 LGS Sorularını Üretiyor...</p>
+            <p id="loading-tip" class="text-xs text-slate-400 mt-2">Lütfen birkaç saniye bekleyin, yepyeni 20 soru hazırlanıyor.</p>
+        </div>
+
+        <!-- TEST EKRANI -->
+        <div id="test-screen" class="hidden">
+            <div class="flex justify-between items-center mb-2 text-xs text-slate-400 font-medium">
+                <span id="question-counter">Soru 1 / 20</span>
+                <span id="current-subject-title" class="text-indigo-400 font-bold uppercase"></span>
+            </div>
+            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-4">
+                <div id="progress-bar" class="h-full bg-indigo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+
+            <div id="question-card" class="bg-slate-800/60 border border-slate-700 p-4 rounded-xl mb-4 text-sm leading-relaxed font-medium"></div>
+
+            <div id="options-container" class="space-y-2 mb-6"></div>
+
+            <button id="next-btn" onclick="nextQuestion()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 font-bold rounded-xl text-sm transition hidden">Sonraki Soru</button>
+        </div>
+
+        <!-- SONUÇ EKRANI -->
+        <div id="result-screen" class="hidden">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold text-emerald-400 mb-1">Test Tamamlandı! 🎉</h2>
+                <p id="score-summary" class="text-sm text-slate-300"></p>
+            </div>
+            <div id="solutions-container" class="space-y-3 mb-6 max-h-72 overflow-y-auto pr-2"></div>
+            <button onclick="location.reload()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition">Ana Menüye Dön</button>
+        </div>
+    </div>
+
+    <script>
+        /* ============================================================
+           AYARLAR
+           ============================================================ */
+        // İsterseniz anahtarı buraya yazın. Boş bırakırsanız ekrandaki
+        // kutucukta girilen anahtar kullanılır.
+        const EMBEDDED_API_KEY = "";
+
+        // Güncel modeller: sırayla denenir, biri çalışmazsa sonrakine geçer.
+        const MODELS = [
+            { id: "gemini-2.5-flash",  maxOutputTokens: 32768 },
+            { id: "gemini-2.0-flash",  maxOutputTokens: 8192  },
+            { id: "gemini-1.5-flash",  maxOutputTokens: 8192  }
+        ];
+
+        const QUESTION_SCHEMA = {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    q:      { type: "STRING" },
+                    options:{ type: "ARRAY", items: { type: "STRING" } },
+                    answer: { type: "INTEGER", minimum: 0, maximum: 3 },
+                    sol:    { type: "STRING" }
+                },
+                required: ["q", "options", "answer", "sol"]
+            }
+        };
+
+        /* ============================================================
+           DURUM DEĞİŞKENLERİ
+           ============================================================ */
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let wrongCount = 0;
+        let userAnswers = [];
+        let activeSubject = "";
+
+        window.onload = function () {
+            const saved = localStorage.getItem("lgs_gemini_key");
+            if (saved) document.getElementById("api-key-input").value = saved;
+            updateStatsAndHistory();
+        };
+
+        /* ============================================================
+           API ANAHTARI YÖNETİMİ
+           ============================================================ */
+        // Yapıştırılan metnin içinden sadece gerçek anahtarı çekmek için:
+        // (URL veya "Bearer ..." gibi fazlalık yapıştırmaları temizler)
+        function cleanKey(value) {
+            const s = String(value || "").trim();
+            const m = s.match(/AIza[0-9A-Za-z_\-]{30,}/);
+            return m ? m[0] : s;
+        }
+
+        function saveApiKey(value) {
+            const key = cleanKey(value);
+            localStorage.setItem("lgs_gemini_key", key);
+        }
+
+        function getApiKey() {
+            const inputKey = cleanKey(document.getElementById("api-key-input").value);
+            return inputKey || localStorage.getItem("lgs_gemini_key") || EMBEDDED_API_KEY;
+        }
+
+        function setApiStatus(type, message) {
+            const el = document.getElementById("api-status");
+            el.textContent = message;
+            el.className = "text-[11px] mt-2 " +
+                (type === "ok"  ? "text-emerald-400 font-semibold" :
+                 type === "err" ? "text-rose-400 font-semibold" :
+                 "text-slate-500");
+        }
+
+        async function testApiKey() {
+            const key = getApiKey();
+            if (!key) {
+                setApiStatus("err", "Önce bir API anahtarı girin.");
+                return;
+            }
+            saveApiKey(key);
+            setApiStatus("info", "Anahtar doğrulanıyor...");
+            try {
+                const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(key));
+                const data = await res.json();
+                if (res.ok && !data.error) {
+                    const count = Array.isArray(data.models) ? data.models.length : 0;
+                    setApiStatus("ok", "✓ Anahtar geçerli. Kullanılabilir model: " + count + " — soru üretimine hazırsınız!");
+                } else {
+                    setApiStatus("err", "✗ Anahtar reddedildi: " + (data.error && data.error.message ? data.error.message : ("HTTP " + res.status)));
+                }
+            } catch (e) {
+                setApiStatus("err", "✗ Bağlantı kurulamadı: " + e.message + " (İnternet bağlantınızı kontrol edin)");
+            }
+        }
+
+        /* ============================================================
+           HATA / BİLGİ GÖSTERİMİ
+           ============================================================ */
+        function showError(message) {
+            const el = document.getElementById("error-box");
+            el.innerHTML = escapeHtml(message).replace(/\n/g, "<br>");
+            el.classList.remove("hidden");
+        }
+        function hideError() {
+            document.getElementById("error-box").classList.add("hidden");
+        }
+        function setLoadingTip(text) {
+            document.getElementById("loading-tip").innerText = text;
+        }
+        function escapeHtml(s) {
+            return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+                return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+            });
+        }
+
+        /* ============================================================
+           SORU ÜRETİMİ (GEMINI)
+           ============================================================ */
+        function buildPrompt(subject) {
+            return `Sen MEB müfredatını ve LGS sınav formatını çok iyi bilen bir 8. sınıf öğretmenisin.
+"${subject}" dersi için, 2027 LGS müfredatına uygun, kazanım ve mantık-muhakeme becerilerini ölçen, tamamen yeni ve özgün 20 adet çoktan seçmeli soru yaz.
+
+Kurallar:
+- Her soru 4 şıklı olmalı: A, B, C, D.
+- "answer" alanı, doğru şıkkın SIFIR tabanlı indeksi olmalı: A=0, B=1, C=2, D=3.
+- "sol" alanında sorunun adım adım, anlaşılır çözümünü ve konu tekrarını yaz.
+- Sorular birbirinden farklı konu/kazanımları kapsasın, tekrara düşmesin.
+- Matematiksel ifadeleri düz metin olarak yaz (örn: x^2, 3/4, √2).
+
+Yanıtı SADECE geçerli bir JSON dizisi olarak ver. Markdown kod bloğu, tırnak veya açıklama ekleme. Şema:
+[{"q":"soru metni","options":["A) ...","B) ...","C) ...","D) ..."],"answer":0,"sol":"adım adım çözüm"}]`;
+        }
+
+        async function callModel(apiKey, model, prompt, useSchema) {
+            const generationConfig = {
+                temperature: 0.9,
+                maxOutputTokens: model.maxOutputTokens,
+                responseMimeType: "application/json"
+            };
+            if (useSchema) generationConfig.responseSchema = QUESTION_SCHEMA;
+
+            const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
+                model.id + ":generateContent?key=" + encodeURIComponent(apiKey);
+
+            const res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: generationConfig
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || data.error) {
+                const msg = (data.error && data.error.message) ? data.error.message : ("HTTP " + res.status);
+                throw new Error(model.id + ": " + msg);
+            }
+            if (data.promptFeedback && data.promptFeedback.blockReason) {
+                throw new Error("İstek güvenlik filtresine takıldı (" + data.promptFeedback.blockReason + ").");
+            }
+            const cand = (data.candidates && data.candidates[0]) || null;
+            if (!cand) throw new Error(model.id + ": Model yanıt üretmedi.");
+            if (cand.finishReason === "SAFETY" || cand.finishReason === "RECITATION") {
+                throw new Error(model.id + ": Yanıt güvenlik filtresi tarafından engellendi.");
+            }
+            const rawText = (cand.content && cand.content.parts ? cand.content.parts : [])
+                .map(function (p) { return p.text || ""; }).join("");
+
+            if (!rawText.trim()) throw new Error(model.id + ": Boş yanıt alındı.");
+
+            try {
+                return parseQuestions(rawText);
+            } catch (e) {
+                if (cand.finishReason === "MAX_TOKENS") {
+                    throw new Error(model.id + ": Yanıt çok uzun olduğu için kesildi, sorular eksik kaldı.");
+                }
+                throw e;
+            }
+        }
+
+        function parseQuestions(rawText) {
+            let raw = String(rawText)
+                .replace(/```json/gi, "")
+                .replace(/```/g, "")
+                .trim();
+
+            let arr = null;
+            try { arr = JSON.parse(raw); } catch (_) {
+                const m = raw.match(/$$[\s\S]*$$/);
+                if (m) {
+                    try { arr = JSON.parse(m[0]); } catch (_) { /* yoksay */ }
+                }
+            }
+            if (!arr) throw new Error("Yapay zekanın yanıtı çözümlenemedi (geçersiz JSON). Lütfen tekrar deneyin.");
+
+            if (!Array.isArray(arr)) {
+                if (Array.isArray(arr.questions)) arr = arr.questions;
+                else if (Array.isArray(arr.data)) arr = arr.data;
+                else throw new Error("Yanıt bir soru listesi içermiyor. Lütfen tekrar deneyin.");
+            }
+
+            const questions = arr.map(normalizeQuestion).filter(Boolean);
+            if (!questions.length) throw new Error("Geçerli soru üretilemedi. Lütfen tekrar deneyin.");
+            return questions;
+        }
+
+        function normalizeQuestion(raw) {
+            if (!raw || typeof raw !== "object") return null;
+
+            const q = String(raw.q != null ? raw.q : (raw.question || "")).trim();
+            if (!q) return null;
+
+            let options = raw.options != null ? raw.options : (raw.choices || []);
+            if (typeof options === "string") options = options.split("\n");
+            if (!Array.isArray(options)) options = [];
+            options = options.map(function (o) { return String(o).trim(); }).filter(Boolean).slice(0, 4);
+            const labels = ["A) ", "B) ", "C) ", "D) "];
+            while (options.length < 4) options.push(labels[options.length] + "—");
+            options = options.map(function (o, i) {
+                return /^([A-D])[).]\s*/.test(o) ? o : labels[i] + o;
+            });
+
+            const answer = normalizeAnswer(raw.answer != null ? raw.answer : (raw.correct != null ? raw.correct : raw.ans), options.length);
+            const sol = String(raw.sol != null ? raw.sol : (raw.solution || "")).trim() || "Çözüm açıklaması bulunamadı.";
+
+            return { q: q, options: options, answer: answer, sol: sol };
+        }
+
+        function normalizeAnswer(a, optionCount) {
+            const s = String(a == null ? "" : a).trim().toUpperCase();
+            const letter = s.match(/^([A-D])([).]|$)/);
+            if (letter) return letter[1].charCodeAt(0) - 65;
+            const num = parseInt(s, 10);
+            if (!isNaN(num)) {
+                if (num >= 0 && num < optionCount) return num;        // 0 tabanlı (istenen format)
+                if (num === optionCount) return optionCount - 1;       // 1 tabanlı taşma
+            }
+            return 0;
+        }
+
+        async function generateAndStart(subject) {
+            hideError();
+            const apiKey = getApiKey();
+            if (!apiKey) {
+                showError("Lütfen önce geçerli bir Gemini API anahtarı girin. (Üstteki kutucuk → 'Anahtarı Doğrula')");
+                return;
+            }
+
+            activeSubject = subject;
+            document.getElementById("subject-selection").classList.add("hidden");
+            document.getElementById("loading-screen").classList.remove("hidden");
+            setLoadingTip("Yapay zeka bağlanıyor...");
+
+            const prompt = buildPrompt(subject);
+            let lastError = null;
+
+            for (let i = 0; i < MODELS.length; i++) {
+                const model = MODELS[i];
+                setLoadingTip("Sorular üretiliyor — model: " + model.id + " (" + (i + 1) + "/" + MODELS.length + ")");
+                try {
+                    currentQuestions = await callModel(apiKey, model, prompt, true);
+                    lastError = null;
+                    break;
+                } catch (e) {
+                    lastError = e;
+                    // Bazı modeller şemayı desteklemez; şemasız tekrar dene
+                    try {
+                        currentQuestions = await callModel(apiKey, model, prompt, false);
+                        lastError = null;
+                        break;
+                    } catch (e2) {
+                        lastError = e2;
+                    }
+                }
+            }
+
+            document.getElementById("loading-screen").classList.add("hidden");
+
+            if (lastError) {
+                document.getElementById("subject-selection").classList.remove("hidden");
+                showError("Soru üretilemedi.\n" + lastError.message +
+                    "\n\nKontrol listesi: (1) Anahtar 'AIza' ile başlamalı ve 39 karakter olmalı. " +
+                    "(2) Anahtarda API kısıtlaması (HTTP referrer) varsa bu sayfa izinli olmalı. " +
+                    "(3) Hesapta kota/kredi kalmamış olabilir.");
+                return;
+            }
+
+            currentIndex = 0;
+            score = 0;
+            wrongCount = 0;
+            userAnswers = [];
+
+            document.getElementById("test-screen").classList.remove("hidden");
+            document.getElementById("current-subject-title").innerText = subject;
+            loadQuestion();
+        }
+
+        /* ============================================================
+           TEST AKIŞI
+           ============================================================ */
+        function loadQuestion() {
+            if (currentIndex >= currentQuestions.length) {
+                showResults();
+                return;
+            }
+
+            const qData = currentQuestions[currentIndex];
+            document.getElementById("question-counter").innerText =
+                "Soru " + (currentIndex + 1) + " / " + currentQuestions.length;
+            document.getElementById("question-card").innerText = qData.q;
+            document.getElementById("progress-bar").style.width =
+                Math.round((currentIndex / currentQuestions.length) * 100) + "%";
+
+            const optionsContainer = document.getElementById("options-container");
+            optionsContainer.innerHTML = "";
+
+            qData.options.forEach(function (opt, idx) {
+                const btn = document.createElement("button");
+                btn.className = "w-full p-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-left text-sm transition font-medium";
+                btn.innerText = opt;
+                btn.onclick = function () { selectOption(idx, qData.answer); };
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById("next-btn").classList.add("hidden");
+        }
+
+        function selectOption(selected, correct) {
+            const buttons = document.getElementById("options-container").getElementsByTagName("button");
+
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].disabled = true;
+                buttons[i].classList.remove("hover:bg-slate-700");
+                if (i === correct) {
+                    buttons[i].classList.add("bg-emerald-600", "border-emerald-500");
+                } else if (i === selected) {
+                    buttons[i].classList.add("bg-rose-600", "border-rose-500");
+                }
+            }
+
+            if (selected === correct) {
+                score++;
+            } else {
+                wrongCount++;
+            }
+
+            userAnswers.push({
+                q: currentQuestions[currentIndex].q,
+                options: currentQuestions[currentIndex].options,
+                selected: selected,
+                correct: correct,
+                sol: currentQuestions[currentIndex].sol
+            });
+
+            document.getElementById("next-btn").classList.remove("hidden");
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            document.getElementById("test-screen").classList.add("hidden");
+            document.getElementById("result-screen").classList.remove("hidden");
+            document.getElementById("progress-bar").style.width = "100%";
+
+            // LGS neti: 4 yanlış 1 doğruyu götürür.
+            const net = Math.max(0, score - wrongCount / 4).toFixed(2);
+            document.getElementById("score-summary").innerHTML =
+                'Doğru: <b class="text-emerald-400">' + score + '</b> | ' +
+                'Yanlış: <b class="text-rose-400">' + wrongCount + '</b> | ' +
+                'Net: <b class="text-indigo-400">' + net + '</b> ' +
+                '<span class="text-[10px] text-slate-500">(4 yanlış = 1 doğru götürür)</span>';
+
+            saveToHistory({
+                subject: activeSubject,
+                total: currentQuestions.length,
+                correct: score,
+                wrong: wrongCount,
+                net: net,
+                date: new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+            });
+
+            const solutionsContainer = document.getElementById("solutions-container");
+            solutionsContainer.innerHTML = '<h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Soru Çözüm Analizi:</h3>';
+
+            userAnswers.forEach(function (ans, i) {
+                const isCorrect = ans.selected === ans.correct;
+                const item = document.createElement("div");
+                item.className = "p-3 rounded-xl border text-xs leading-relaxed " +
+                    (isCorrect ? "bg-emerald-950/40 border-emerald-800/60" : "bg-rose-950/40 border-rose-800/60");
+                item.innerHTML =
+                    '<p class="font-bold mb-1">' + (i + 1) + '. ' + escapeHtml(ans.q) + '</p>' +
+                    '<p class="text-slate-300">' +
+                        '<b class="' + (isCorrect ? "text-emerald-300" : "text-rose-300") + '">Senin cevabın:</b> ' +
+                        escapeHtml(ans.options[ans.selected] || "-") +
+                        (isCorrect ? '' : ' &nbsp;→&nbsp; <b class="text-emerald-300">Doğru:</b> ' + escapeHtml(ans.options[ans.correct] || "-")) +
+                    '</p>' +
+                    '<p class="text-slate-300 mt-1"><b class="text-indigo-300">Çözüm:</b> ' + escapeHtml(ans.sol) + '</p>';
+                solutionsContainer.appendChild(item);
+            });
+        }
+
+        /* ============================================================
+           ÇALIŞMA GÜNLÜĞÜ & İSTATİSTİK
+           ============================================================ */
+        function saveToHistory(record) {
+            let history = JSON.parse(localStorage.getItem("lgs_history") || "[]");
+            history.unshift(record);
+            if (history.length > 100) history = history.slice(0, 100);
+            localStorage.setItem("lgs_history", JSON.stringify(history));
+        }
+
+        function updateStatsAndHistory() {
+            const history = JSON.parse(localStorage.getItem("lgs_history") || "[]");
+            const historyList = document.getElementById("history-list");
+            historyList.innerHTML = "";
+
+            let totalQ = 0, totalCorrect = 0, totalNet = 0;
+
+            if (history.length === 0) {
+                historyList.innerHTML = '<p class="text-slate-500 text-center py-2">Henüz çözülmüş test bulunmuyor.</p>';
+            } else {
+                history.forEach(function (item) {
+                    totalQ += Number(item.total) || 0;
+                    totalCorrect += Number(item.correct) || 0;
+                    totalNet += parseFloat(item.net) || 0;
+
+                    const div = document.createElement("div");
+                    div.className = "p-2.5 bg-slate-800/60 border border-slate-700/60 rounded-lg flex justify-between items-center";
+                    div.innerHTML =
+                        '<div>' +
+                            '<span class="font-bold text-indigo-300">' + escapeHtml(item.subject) + '</span>' +
+                            '<span class="text-[10px] text-slate-400 ml-2">' + escapeHtml(item.date) + '</span>' +
+                        '</div>' +
+                        '<div class="text-right font-medium">' +
+                            '<span class="text-emerald-400">' + item.correct + 'D</span> / ' +
+                            '<span class="text-rose-400">' + item.wrong + 'Y</span> = ' +
+                            '<b class="text-slate-100">' + item.net + ' Net</b>' +
+                        '</div>';
+                    historyList.appendChild(div);
+                });
+            }
+
+            document.getElementById("stat-total-q").innerText = totalQ;
+            document.getElementById("stat-total-net").innerText = totalNet.toFixed(2);
+            document.getElementById("stat-accuracy").innerText =
+                totalQ > 0 ? "%" + Math.round((totalCorrect / totalQ) * 100) : "%0";
+        }
+
+        function clearHistory() {
+            if (confirm("Tüm çalışma günlüğü ve istatistikler sıfırlansın mı?")) {
+                localStorage.removeItem("lgs_history");
+                updateStatsAndHistory();
+            }
+        }
+    </script>
+</body>
+</html>
